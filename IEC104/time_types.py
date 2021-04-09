@@ -1,6 +1,6 @@
 from datetime import datetime
 
-import Devices.IKZUtils as Utils
+import Utils.IKZUtils as Utils
 
 
 def cp56time2a_to_time(buf):
@@ -10,7 +10,7 @@ def cp56time2a_to_time(buf):
     minutes = buf[2] & 0x3F
     hours = buf[3] & 0x1F
     day = buf[4] & 0x1F
-    month = (buf[5] & 0x0F) - 1
+    month = (buf[5] & 0x0F)     # Проверить на корректность
     year = (buf[6] & 0x7F) + 2000
 
     return datetime(year, month, day, hours, minutes, seconds, microseconds)

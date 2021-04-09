@@ -1,19 +1,27 @@
 import IEC104.apci as apci
-import IEC104.types as time_types
-from Devices.IKZUtils import *
+import IEC104.time_types as time_types
+from Utils.IKZUtils import *
 from datetime import datetime
 
 
 def get_packet(ssn, rsn, type_id, sq, test, positive_negative, cot, org, asdu, objects: list):
-    packet = apci.i_frame(ssn, rsn)
-    packet.append(type_id)
+    packet = apci.i_frame(ssn, rsn)     # Control field
+    packet.append(type_id)      # ASDU type id
+    # Single or Sequence, structure qualifier + num of elements(0-127)
     packet.append(int("{0:b}".format(sq) + "{0:b}".format(len(objects)), 2))
-    packet.append(int("{0:b}".format(test) + "{0:b}".format(positive_negative)
-                      + "{0:b}".format(cot), 2))
+    # 0 (no test), 1 (test) + 0 (positive confirm), 1 (negative confirm) + Cause of transmission
+    packet.append(int("{0:b}".format(test) + "{0:b}".format(positive_negative) + "{0:b}".format(cot), 2))
+    # Originator address(ORG)
     packet.append(org)
+    # ASDU address
     packet += int_list_to_required_size(int_to_byte_int_list(asdu), 2)
-    for obj in objects:
-        packet += obj.get_packet()
+    if sq == 1:
+        packet += objects[0].get_address()
+        for i in range(1, len(objects)):
+            packet += objects[i].get_packet(sq=True)
+    else:
+        for obj in objects:
+            packet += obj.get_packet()
 
     return [104, len(packet)] + packet
 
@@ -22,6 +30,9 @@ class InfoObj(object):
 
     def __init__(self, data):
         self.ioa = data['IOA']  # Information Object Address uint:24
+
+    def get_address(self):
+        return int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
 
     def get_packet(self):
         return int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
@@ -38,8 +49,11 @@ class SIQ(InfoObj):
         self.spi = data['Value']  # 0: off, 1: on, bool
         # |IV|NT|SB|BL|0|0|0|SPI|
 
-    def get_packet(self):
-        packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
         packet.append(
             int("{0:b}".format(self.iv) + "{0:b}".format(self.nt) + "{0:b}".format(self.sb)
                 + "{0:b}".format(self.bl) + self.reserve + "{0:b}".format(self.spi), 2)
@@ -57,11 +71,14 @@ class DIQ(InfoObj):
         self.reserve = '00'  # reserve uint:2
         self.dpi = data['Value']  # 0: intermediate state, 1: off, 2: on, 3: undefined state uint:2
 
-    def get_packet(self):
+    def get_packet(self, sq=False):
         dpi = "{0:b}".format(self.dpi)
         if len(dpi) < 2:
             dpi = '0' + dpi
-        packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
+        if sq:
+            packet = []
+        else:
+            packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
         packet.append(
             int("{0:b}".format(self.iv) + "{0:b}".format(self.nt) + "{0:b}".format(self.sb)
                 + "{0:b}".format(self.bl) + self.reserve + dpi, 2)
@@ -175,8 +192,11 @@ class MMeNc1(QDS):
         super(MMeNc1, self).__init__(data)
         self.value = data['Value']
 
-    def get_packet(self):
-        packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = int_list_to_required_size(int_to_byte_int_list(self.ioa), 3)
         packet += int_list_to_required_size(float_to_byte_int_list(self.value), 4)
         packet.append(
             int("{0:b}".format(self.invalid) + "{0:b}".format(self.not_topical) + "{0:b}".format(self.substituted)
@@ -241,8 +261,8 @@ class MSpTb1(SIQ):
     def __init__(self, data):
         super(MSpTb1, self).__init__(data)
 
-    def get_packet(self):
-        packet = super(MSpTb1, self).get_packet()
+    def get_packet(self, sq=False):
+        packet = super(MSpTb1, self).get_packet(sq)
         packet += time_types.time_to_cp56time2a(datetime.utcnow())
         return packet
 
@@ -285,7 +305,7 @@ class MMeTf1(MMeNc1):
     def __init__(self, data):
         super(MMeTf1, self).__init__(data)
 
-    def get_packet(self):
+    def get_packet(self, sq=False):
         packet = super(MMeTf1, self).get_packet()
         packet += time_types.time_to_cp56time2a(datetime.utcnow())
         return packet
@@ -324,8 +344,11 @@ class CScNa1(InfoObj):
         super(CScNa1, self).__init__(data)
         self.data = data['Data']
 
-    def get_packet(self):
-        packet = super(CScNa1, self).get_packet()
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = super(CScNa1, self).get_packet()
         packet.append(self.data)
         return packet
 
@@ -364,8 +387,11 @@ class CSeNc1(InfoObj):
         self.val = data['Data']
         self.qds = data['QDS']
 
-    def get_packet(self):
-        packet = super(CSeNc1, self).get_packet()
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = super(CSeNc1, self).get_packet()
         packet += int_list_to_required_size(float_to_byte_int_list(self.val), 4)
         packet.append(
             int("{0:b}".format(self.qds.invalid) + "{0:b}".format(self.qds.not_topical) +
@@ -392,8 +418,11 @@ class CScTa1(InfoObj):
         self.data = data['Data']
         self.time = data['Time']
 
-    def get_packet(self):
-        packet = super(CScTa1, self).get_packet()
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = super(CScTa1, self).get_packet()
         packet.append(self.data)
         packet += time_types.time_to_cp56time2a(self.time)
         return packet
@@ -414,8 +443,11 @@ class CIcNa1(InfoObj):
         super(CIcNa1, self).__init__(data)
         self.c_irg = data['C_irq']
 
-    def get_packet(self):
-        packet = super(CIcNa1, self).get_packet()
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = super(CIcNa1, self).get_packet()
         packet.append(self.c_irg)
         return packet
 
@@ -441,8 +473,11 @@ class CCsNa1(InfoObj):
         super(CCsNa1, self).__init__(data)
         self.time = data['Time']
 
-    def get_packet(self):
-        packet = super(CCsNa1, self).get_packet()
+    def get_packet(self, sq=False):
+        if sq:
+            packet = []
+        else:
+            packet = super(CCsNa1, self).get_packet()
         packet += time_types.time_to_cp56time2a(self.time)
         return packet
 
@@ -542,8 +577,6 @@ data_types = {
     'bit': [1, 30],
     'float': [13, 36]
 }
-
-sporadic_types = [30, 36]
 
 commands = {
     45: CScNa1,

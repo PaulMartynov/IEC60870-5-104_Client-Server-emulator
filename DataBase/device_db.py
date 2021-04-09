@@ -4,15 +4,6 @@ from sqlalchemy import Column, ForeignKey, Integer, String
 # для определения таблицы и модели
 from sqlalchemy.ext.declarative import declarative_base
 
-# для создания отношений между таблицами
-from sqlalchemy.orm import relationship
-
-# для настроек
-from sqlalchemy import create_engine
-
-# Импорт настроек из .env
-import config
-
 # создание экземпляра declarative_base
 Base = declarative_base()
 
@@ -56,9 +47,3 @@ class Iec104Devices(Base):
     SN = Column(Integer, primary_key=True)
     signals_description = Column(String)
     has_event = Column(Integer, nullable=False)
-
-
-# поверяет существует ли база по указанному пути, если нет то создаёт
-def check_or_create_db():
-    engine = create_engine(config.DATABASE_URI)
-    Base.metadata.create_all(engine, Base.metadata.tables.values(), checkfirst=True)

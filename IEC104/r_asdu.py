@@ -1,4 +1,4 @@
-from IEC104.types import cp56time2a_to_time
+from IEC104.time_types import cp56time2a_to_time
 
 
 class ASDU(object):
@@ -19,6 +19,13 @@ class ASDU(object):
                 if self.type_id in types:
                     obj = types[self.type_id](data)
                     self.objs.append(obj)
+        else:
+            addr = data.read("uintle:24")
+            for i in range(self.sq_count):
+                if self.type_id in types:
+                    obj = types[self.type_id](data, addr=addr, sq=self.sq)
+                    self.objs.append(obj)
+                    addr += 1
 
 
 class QDS(object):
@@ -82,8 +89,8 @@ class MSpNa1(SIQ):
     name = 'M_SP_NA_1'
     description = 'Single-point information without time tag'
 
-    def __init__(self, data):
-        super(MSpNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MSpNa1, self).__init__(data, addr, sq)
 
     def get_info(self):
         return 'Type: {}. Single-point information with adr: {}, data: {}'.format(MSpNa1.type_id, self.ioa, self.spi)
@@ -94,8 +101,8 @@ class MSpTa1(InfoObj):
     name = 'M_SP_TA_1'
     description = 'Single-point information with time tag CP24Time2a'
 
-    def __init__(self, data):
-        super(MSpTa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MSpTa1, self).__init__(data, addr, sq)
 
 
 class MDpNa1(DIQ):
@@ -103,8 +110,8 @@ class MDpNa1(DIQ):
     name = 'M_DP_NA_1'
     description = 'Double-point information without time tag'
 
-    def __init__(self, data):
-        super(MDpNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MDpNa1, self).__init__(data, addr, sq)
 
 
 class MDpTa1(InfoObj):
@@ -142,8 +149,8 @@ class MMeNa1(InfoObj):
     name = 'M_ME_NA_1'
     description = 'Measured value, normalized value'
 
-    def __init__(self, data):
-        super(MMeNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MMeNa1, self).__init__(data, addr, sq)
 
 
 class MMeTa1(InfoObj):
@@ -170,8 +177,8 @@ class MMeNc1(InfoObj):
     description = 'Measured value, short floating point number'
     length = 5
 
-    def __init__(self, data):
-        super(MMeNc1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MMeNc1, self).__init__(data, addr, sq)
 
         self.val = data.read("floatle:32")
 
@@ -237,8 +244,8 @@ class MSpTb1(SIQ):
     name = 'M_SP_TB_1'
     description = 'Single-point information with time tag CP56Time2a'
 
-    def __init__(self, data):
-        super(MSpTb1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MSpTb1, self).__init__(data, addr, sq)
 
         time_data = []
         for i in range(7):
@@ -291,8 +298,8 @@ class MMeTf1(MMeNc1):
     name = 'M_ME_TF_1'
     description = 'Measured value, short floating point number with time tag CP56Time2a'
 
-    def __init__(self, data):
-        super(MMeTf1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(MMeTf1, self).__init__(data, addr, sq)
 
         time_data = []
         for i in range(7):
@@ -338,8 +345,8 @@ class CScNa1(SIQ):
     name = 'C_SC_NA_1'
     description = 'Single command'
 
-    def __init__(self, data):
-        super(CScNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(CScNa1, self).__init__(data, addr, sq)
 
     def get_info(self):
         return 'Type: {}. Single command with adr: {}, data: {}'.format(CScNa1.type_id, self.ioa, self.spi)
@@ -374,8 +381,8 @@ class CSeNc1(InfoObj):
     name = 'C_SE_NC_1'
     description = 'Set-point command, short floating point number'
 
-    def __init__(self, data):
-        super(CSeNc1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(CSeNc1, self).__init__(data, addr, sq)
 
         self.val = data.read("floatle:32")
 
@@ -399,8 +406,8 @@ class CScTa1(SIQ):
     name = 'C_SC_TA_1'
     description = 'Single command with time tag CP56Time2a'
 
-    def __init__(self, data):
-        super(CScTa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(CScTa1, self).__init__(data, addr, sq)
 
         time_data = []
         for i in range(7):
@@ -429,8 +436,8 @@ class CIcNa1(InfoObj):
     name = 'C_IC_NA_1'
     description = 'Interrogation command'
 
-    def __init__(self, data):
-        super(CIcNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(CIcNa1, self).__init__(data, addr, sq)
         self.c_irq = data.read('uint:8')  # Counter interrogation request qualifier
 
     def get_data(self):
@@ -458,8 +465,8 @@ class CCsNa1(InfoObj):
     name = 'C_CS_NA_1'
     description = 'Clock synchronization command'
 
-    def __init__(self, data):
-        super(CCsNa1, self).__init__(data)
+    def __init__(self, data, addr=0, sq=False):
+        super(CCsNa1, self).__init__(data, addr, sq)
         time_data = []
         for i in range(7):
             time_data.append(data.read('uint:8'))

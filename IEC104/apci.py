@@ -1,16 +1,16 @@
 import struct
 
-TESTFR_CON = [131, 0, 0, 0]     # \x83\x00\x00\x00
-TESTFR_ACT = [67, 0, 0, 0]      # \x43\x00\x00\x00
+TESTFR_CON = [131, 0, 0, 0]  # \x83\x00\x00\x00
+TESTFR_ACT = [67, 0, 0, 0]  # \x43\x00\x00\x00
 
-STOPDT_CON = [35, 0, 0, 0]      # \x23\x00\x00\x00
-STOPDT_ACT = [19, 0, 0, 0]      # \x13\x00\x00\x00
+STOPDT_CON = [35, 0, 0, 0]  # \x23\x00\x00\x00
+STOPDT_ACT = [19, 0, 0, 0]  # \x13\x00\x00\x00
 
-STARTDT_CON = [11, 0, 0, 0]     # \x0b\x00\x00\x00
-STARTDT_ACT = [7, 0, 0, 0]      # \x07\x00\x00\x00
+STARTDT_CON = [11, 0, 0, 0]  # \x0b\x00\x00\x00
+STARTDT_ACT = [7, 0, 0, 0]  # \x07\x00\x00\x00
 
 
-def u_frame(data):
+def u_frame_answer(data):
     if data == STARTDT_ACT:
         return STARTDT_CON
     elif data == STOPDT_ACT:
